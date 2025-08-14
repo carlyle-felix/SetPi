@@ -4,7 +4,8 @@
 
 #include "../incl/manager.h"
 
-#define MAX_BUFFER 128
+#define MAX_BUFFER 256
+#define MAX_VALUE 128
 
 struct value_list {
     char *arm_freq;
@@ -111,7 +112,7 @@ int8_t write_config(List l)
     register uint8_t i, j, k;
     uint8_t num_keys, key_len, len;
     const char *key[] = {"arm_freq", "gpu_freq", "over_voltage_delta"};
-    char *buffer, *path, *str, value[MAX_BUFFER];
+    char *buffer, *path, *buffer_, value[MAX_VALUE], str[MAX_BUFFER];
 
     path = config_path();
     if (!path) {
@@ -132,7 +133,7 @@ int8_t write_config(List l)
     }
 
     num_keys = (uint8_t) (sizeof(key) / sizeof(key[0]));
-    str = buffer;
+    buffer_ = buffer;
     for (i = 0; i < num_keys; i++) {
         key_len = strlen(key[i]);
 
@@ -167,7 +168,7 @@ int8_t write_config(List l)
                 break;
         }
 
-        buffer = str;
+        buffer = buffer_;
         while (*buffer) {
             // ignore comments
             if (*buffer == '#') {
@@ -197,9 +198,9 @@ int8_t write_config(List l)
 		j = 0;
 		len = strlen(value);
                 if (len > k) {
-                    expand(str, buffer - str, (len - k));
+                    expand(buffer_, buffer - buffer_, (len - k));
 		} else if (len < k) {
-                    truncate(str, (buffer + len) - str, k - len);
+                    truncate(buffer_, (buffer + len) - buffer_, k - len);
      		}
 
                 j = 0;
@@ -207,16 +208,23 @@ int8_t write_config(List l)
                     *buffer++ = value[j++];
                 }
 
+		break;
+
             } else {
                 while (j--) {
                     buffer--;
-                    continue;
                 }
             }
             buffer++;
+	    if (!(*buffer)) {
+		sprintf(str, "\n%s=%s", key[i], value);
+		strcat(buffer_, str);
+		break;
+	    }
         }
     }
 
+	printf("%s\n", buffer_);
  /*   
     // TODO: gain root here.
     fp = fopen(path, "w");
@@ -237,7 +245,7 @@ int8_t write_config(List l)
     // TODO: drop root here.
 */
 
-    free(str);  // buffer placeholder
+    free(buffer_);  // buffer placeholder
     
     return 0;
 }
