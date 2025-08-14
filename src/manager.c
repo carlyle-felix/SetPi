@@ -70,9 +70,9 @@ int8_t set_value(List l, Key k, const char *value)
             strcpy(l->gpu_freq, value);
             break;
 
-        case OV:  
+        case OV:
             l->ov = mem_alloc(strlen(value) + 1);
-            if (l->ov) {
+            if (!l->ov) {
                 return -1;
             }
             strcpy(l->ov, value);
