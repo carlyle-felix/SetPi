@@ -13,6 +13,8 @@ struct value_list {
 };
 
 char *get_buffer(const char *p);
+void truncate(char *buffer, uint8_t t_len);
+void expand(char *buffer, uint8_t t_len);
 void *mem_alloc(uint16_t n);
 
 List create_list(void)
@@ -105,8 +107,9 @@ char *config_path(void)
 
 int8_t write_config(List l)
 {
-    register uint8_t i, j;
-    uint8_t num_keys, key_len;
+    FILE *fp;
+    register uint8_t i, j, k;
+    uint8_t num_keys, key_len, len;
     const char *key[] = {"arm_freq", "gpu_freq", "over_voltage_delta"};
     char *buffer, *path, *str, value[MAX_BUFFER];
 
@@ -165,7 +168,7 @@ int8_t write_config(List l)
         }
 
         buffer = str;
-        while (*buffer++) {
+        while (*buffer) {
             // ignore comments
             if (*buffer == '#') {
                 while (*buffer++ != '\n');
@@ -174,28 +177,110 @@ int8_t write_config(List l)
 
             j = 0;
             while (*buffer == key[i][j]) {
-                printf("j: %d", j);
+                printf("buffer: %c, key: %c     buffer-n: %c, key-n: %c\n", *buffer, key[i][j], *(buffer + 1) , key[i][j+1]);
+                printf("j: %d\n", j);
                 buffer++;
                 j++;
             }
             
+            k = 0;
             if (j == key_len) {
                 
                 printf("%s\n", buffer);
                 printf("%s\n", value);
                 // modify config here
 
+                buffer = (buffer + 2);   // go to character after '='.
+                while (*buffer++ != '\n') {
+                    k++;
+                }
+                printf("k: %d\n", k);
+                while (*buffer != '=') {
+                    buffer--;
+                }
+                buffer++;
+
+                // fix this!
+               	printf("\ntruncate or expand\n");
+                // truncate or expand the buffer
+                if ((len = strlen(key[i])) > k) {
+                    expand(++buffer, (len + k));
+                } else if ((len = strlen(key[i]) < k)) {
+                    truncate(++buffer, (len - k));
+                }
+
+                j = 0;
+                while (value[j]) {
+                    *buffer++ = value[j++];
+                }
+
             } else {
-                continue;
+                while (j--) {
+                    buffer--;
+                    continue;
+                }
             }
-            
+            buffer++;
         }
     }
+
+    printf("new str: \n\n%s\n", str);
+
+ /*   
+    // TODO: gain root here.
+    fp = fopen(path, "w");
+    free(path);
+    if (!fp) {
+        printf("error: failed to open config.txt in write_config().\n");
+        free(str);
+        return -1;
+    }
+
+    len = fwrite(buffer, sizeof(char), strlen(buffer) + 1, fp);
+    if (len < (strlen(buffer) + 1)) {
+        printf("error: failed to write new config.txt.\n");
+        free(str);
+        return -1;
+    }
+    fclose(fp);
+    // TODO: drop root here.
+*/
 
     free(str);  // buffer placeholder
     
     return 0;
 }
+
+void truncate(char *buffer, uint8_t t_len)
+{
+    uint32_t s_len;
+    register uint8_t len;
+    char *str = buffer;
+
+    s_len = strlen(str);
+    len = s_len - t_len;
+    while (len--) {
+        *str = str[t_len++];
+        str++;
+    }
+
+    str[len] = '\0';
+}
+
+void expand(char *buffer, uint8_t e_len)
+{
+    uint32_t s_len;
+    register uint8_t len;
+    char *str = buffer;
+
+    s_len = strlen(str);
+    len = s_len + e_len;
+    str[len + 1] = '\0';
+    while (len--) {
+        str[len] = str[len - 1];
+    }
+}
+
 
 /*
     returns a malloc'd pointer to buffer of text found in config.txt.
