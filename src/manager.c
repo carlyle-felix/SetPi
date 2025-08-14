@@ -13,8 +13,8 @@ struct value_list {
 };
 
 char *get_buffer(const char *p);
-void truncate(char *buffer, uint8_t t_len);
-void expand(char *buffer, uint8_t t_len);
+void truncate(char *buffer, uint16_t pos, uint8_t t_len);
+void expand(char *buffer, uint16_t pos, uint8_t t_len);
 void *mem_alloc(uint16_t n);
 
 List create_list(void)
@@ -177,37 +177,30 @@ int8_t write_config(List l)
 
             j = 0;
             while (*buffer == key[i][j]) {
-                printf("buffer: %c, key: %c     buffer-n: %c, key-n: %c\n", *buffer, key[i][j], *(buffer + 1) , key[i][j+1]);
-                printf("j: %d\n", j);
                 buffer++;
                 j++;
             }
             
             k = 0;
             if (j == key_len) {
-                
-                printf("%s\n", buffer);
-                printf("%s\n", value);
-                // modify config here
-
-                buffer = (buffer + 2);   // go to character after '='.
+                buffer++;   // go to character after '='
                 while (*buffer++ != '\n') {
                     k++;
                 }
-                printf("k: %d\n", k);
+
                 while (*buffer != '=') {
                     buffer--;
                 }
-                buffer++;
+		buffer++;
 
-                // fix this!
-               	printf("\ntruncate or expand\n");
                 // truncate or expand the buffer
-                if ((len = strlen(key[i])) > k) {
-                    expand(++buffer, (len + k));
-                } else if ((len = strlen(key[i]) < k)) {
-                    truncate(++buffer, (len - k));
-                }
+		j = 0;
+		len = strlen(value);
+                if (len > k) {
+                    expand(str, buffer - str, (len - k));
+		} else if (len < k) {
+                    truncate(str, (buffer + len) - str, k - len);
+     		}
 
                 j = 0;
                 while (value[j]) {
@@ -223,8 +216,6 @@ int8_t write_config(List l)
             buffer++;
         }
     }
-
-    printf("new str: \n\n%s\n", str);
 
  /*   
     // TODO: gain root here.
@@ -251,34 +242,30 @@ int8_t write_config(List l)
     return 0;
 }
 
-void truncate(char *buffer, uint8_t t_len)
+void truncate(char *buffer, uint16_t pos, uint8_t t_len)
 {
-    uint32_t s_len;
-    register uint8_t len;
+    uint32_t b_len;
+    register uint32_t i;
     char *str = buffer;
 
-    s_len = strlen(str);
-    len = s_len - t_len;
-    while (len--) {
-        *str = str[t_len++];
-        str++;
+    b_len = strlen(buffer);
+    for (i = pos; i < (b_len - t_len); i++) {
+        str[i] = str[i + t_len];
     }
-
-    str[len] = '\0';
+    str[i] = '\0';
 }
 
-void expand(char *buffer, uint8_t e_len)
+void expand(char *buffer, uint16_t pos, uint8_t e_len)
 {
-    uint32_t s_len;
-    register uint8_t len;
+    uint32_t b_len;
+    register uint32_t i;
     char *str = buffer;
 
-    s_len = strlen(str);
-    len = s_len + e_len;
-    str[len + 1] = '\0';
-    while (len--) {
-        str[len] = str[len - 1];
+    b_len = strlen(buffer);
+    for (i = b_len + e_len; i > pos; i--) {
+        str[i] = str[i - e_len];
     }
+    str[b_len + e_len + 1] = '\0';
 }
 
 

@@ -1,4 +1,4 @@
-FLAGS	=	-Wall -g -fsanitize=address
+FLAGS	=	-Wall -g
 
 set_pi: set_pi.o manager.o
 	gcc -o set_pi src/set_pi.c src/manager.c ${FLAGS}
