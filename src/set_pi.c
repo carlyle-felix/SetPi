@@ -9,6 +9,7 @@ int main(int argc, char *argv[])
     List l;
     register uint8_t i;
     uint8_t j;
+    Key k;
 
     // check privilege
     if (!getuid())
@@ -19,6 +20,19 @@ int main(int argc, char *argv[])
 
     if (argc == 1) {
         printf("menu goes here.\n");
+        return 0;
+    }
+
+    if (!strcmp(argv[1], "show")) {
+        if (!strcmp(argv[2], "cpu")) {
+            k = ARM;
+        } else if (!strcmp(argv[2], "gpu")) {
+            k = GPU;
+        } else if (!strcmp(argv[2], "ov")) {
+            k = OV;
+        }
+        printf("%s", current_value(k));
+
         return 0;
     }
 
