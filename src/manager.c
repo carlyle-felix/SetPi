@@ -220,7 +220,6 @@ int8_t write_config(List l)
                 while (*buffer && *buffer++ != '\n');
                 continue;
             }
-            buffer++;
 
 	    if (!(*buffer)) {
 		sprintf(str, "\n%s=%s", key[i], value);
@@ -326,7 +325,7 @@ char *current_value(Key k)
             while (*buffer && *buffer++ != '\n');
             continue;
         }
-        buffer++;
+
     }
     if (!(*buffer)) {
         free(buffer_);
