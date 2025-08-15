@@ -11,7 +11,7 @@
 struct value_list {
     char *arm_freq;
     char *gpu_freq;
-    char *ov; 
+    char *ov;
 };
 
 char *get_buffer(const char *p);
@@ -54,7 +54,7 @@ void *mem_alloc(uint16_t n)
 int8_t set_value(List l, Key k, const char *value)
 {
     switch (k) {
-        
+
         case ARM:
             l->arm_freq = mem_alloc(strlen(value) + 1);
             if (!l->arm_freq) {
@@ -92,19 +92,24 @@ int8_t set_value(List l, Key k, const char *value)
 char *config_path(void)
 {
     FILE *fp;
-    
-    fp = fopen("/home/carlyle/config.txt", "r");       // /boot/firmware/config.txt", "r"
-    if (fp) {
-        return "/home/carlyle/config.txt";
-    }
+    char *p;
 
-    fp = fopen("/boot/config.txt", "r");
-    if (!fp) {
+    p = mem_alloc(MAX_STR);
+    if (!p) {
+        return NULL;
+    }
+        // /boot/firmware/config.txt", "r"
+    if ((fp = fopen("/home/carlyle/config.txt", "r"))) {
+        strcpy(p, "/home/carlyle/config.txt");
+    } else if ((fp = fopen("/boot/config.txt", "r"))) {
+        strcpy(p, "/boot/config.txt");
+    } else {
         printf("error: unable to locate config.txt.\n");
         return NULL;
     }
+    fclose(fp);
 
-    return "/boot/config.txt";
+    return p;
 }
 
 int8_t write_config(List l)
@@ -121,6 +126,7 @@ int8_t write_config(List l)
     }
     
     buffer = get_buffer(path);
+    free(path);
     if (!buffer) {
         return -1;
     }
@@ -291,6 +297,7 @@ char *current_value(Key k)
     }
 
     buffer = get_buffer(path);
+    free(path);
     if (!buffer) {
         return NULL;
     }

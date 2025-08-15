@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "../incl/manager.h"
 
@@ -12,12 +13,13 @@ int main(int argc, char *argv[])
     register uint8_t i;
     uint8_t j;
     Key k;
+    char *str;
 
     // check privilege
     if (!getuid())
     {
         printf("error: pi-freq needs root privileges.\n");
-        return 1;
+        return -1;
     }
 
     if (argc == 1) {
@@ -31,7 +33,9 @@ int main(int argc, char *argv[])
             printf("error: invalid key %s.\n", argv[2]);
             return -1;
         }
-        printf("%s", current_value(k));
+        str = current_value(k);
+        printf("%s", str);
+        free(str);
 
         return 0;
     }
@@ -46,6 +50,7 @@ int main(int argc, char *argv[])
         j = set_value(l, k, argv[++i]);
         if (j) {
             printf("failed.\n");
+            delete_list(l);
             return -1;
         }
     }
