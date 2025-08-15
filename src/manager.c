@@ -4,8 +4,9 @@
 
 #include "../incl/manager.h"
 
+#define KEYS {"arm_freq", "gpu_freq", "over_voltage_delta"}
 #define MAX_BUFFER 256
-#define MAX_VALUE 128
+#define MAX_STR 128
 
 struct value_list {
     char *arm_freq;
@@ -111,8 +112,8 @@ int8_t write_config(List l)
     FILE *fp;
     register uint8_t i, j, k;
     uint8_t num_keys, key_len, len;
-    const char *key[] = {"arm_freq", "gpu_freq", "over_voltage_delta"};
-    char *buffer, *path, *buffer_, value[MAX_VALUE], str[MAX_BUFFER];
+    const char *key[] = KEYS;
+    char *buffer, *path, *buffer_, value[MAX_STR], str[MAX_BUFFER];
 
     path = config_path();
     if (!path) {
@@ -121,10 +122,9 @@ int8_t write_config(List l)
     
     buffer = get_buffer(path);
     if (!buffer) {
-        free(path);
         return -1;
     }
-
+printf("key1: %s\n", key[0]);
     // allocate additional MAX_BUFFER bytes for changes.
     buffer = realloc(buffer, strlen(buffer) + MAX_BUFFER);
     if (!buffer) {
@@ -276,6 +276,68 @@ void expand(char *buffer, uint16_t pos, uint8_t e_len)
     str[b_len + e_len + 1] = '\0';
 }
 
+/*
+        returns a malloc'd pointer to the value assigned to a given key.
+*/
+char *current_value(Key k)
+{
+    const char *key[] = KEYS;
+    char *path, *buffer, *buffer_, value[MAX_STR], *str;
+    register uint8_t i;
+
+    path = config_path();
+    if (!path) {
+        return NULL;
+    }
+
+    buffer = get_buffer(path);
+    if (!buffer) {
+        return NULL;
+    }
+
+    buffer_ = buffer;
+    while (*buffer) {
+        if (*buffer == '#') {
+            while (*buffer++ != '\n');
+        }
+
+        i = 0;
+        while (*buffer == key[k][i]) {
+            buffer++;
+            i++;
+        }
+
+        if (i == strlen(key[k])) {
+
+            for (i = 0; *buffer++ != '\n'; i++) {
+                value[i] = *buffer;
+            }
+            value[i] = '\0';
+
+            break;
+        } else {
+            while (i-- > 0) {
+                buffer--;
+            }
+        }
+        buffer++;
+    }
+    if (!(*buffer)) {
+        free(buffer_);
+        return "key not found.";
+    }
+
+    str = mem_alloc(strlen(value) + 1);
+    if (!str) {
+        free(buffer_);
+        return NULL;
+    }
+    strcpy(str, value);
+
+    free(buffer_);
+
+    return str;
+}
 
 /*
     returns a malloc'd pointer to buffer of text found in config.txt.

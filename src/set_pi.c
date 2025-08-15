@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
     }
 
     l = create_list();
-    for (i = 1; i < argc; i++) {
+    for (i = 2; i < argc; i++) {
 	if (!strcmp(argv[i], "cpu")) {
             k = ARM;
         } else if (!strcmp(argv[i], "gpu")) {
@@ -34,7 +34,6 @@ int main(int argc, char *argv[])
         } else {
             continue;
         }
-
         j = set_value(l, k, argv[++i]);
         if (j) {
             printf("failed.\n");
