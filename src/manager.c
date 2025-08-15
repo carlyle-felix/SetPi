@@ -178,7 +178,7 @@ int8_t write_config(List l)
         while (*buffer) {
             // ignore comments
             if (*buffer == '#') {
-                while (*buffer++ != '\n');
+                while (*buffer && *buffer++ != '\n');
                 continue;
             }
 
@@ -187,11 +187,11 @@ int8_t write_config(List l)
                 buffer++;
                 j++;
             }
-            
+
             k = 0;
             if (j == key_len) {
                 buffer++;   // go to character after '='
-                while (*buffer++ != '\n') {
+                while (*buffer && *buffer++ != '\n') {
                     k++;
                 }
 
@@ -217,11 +217,11 @@ int8_t write_config(List l)
 		break;
 
             } else {
-                while (j--) {
-                    buffer--;
-                }
+                while (*buffer && *buffer++ != '\n');
+                continue;
             }
             buffer++;
+
 	    if (!(*buffer)) {
 		sprintf(str, "\n%s=%s", key[i], value);
 		strcat(buffer_, str);
@@ -305,7 +305,7 @@ char *current_value(Key k)
     buffer_ = buffer;
     while (*buffer) {
         if (*buffer == '#') {
-            while (*buffer++ != '\n');
+            while (*buffer && *buffer++ != '\n');
         }
 
         i = 0;
@@ -323,9 +323,8 @@ char *current_value(Key k)
 
             break;
         } else {
-            while (i-- > 0) {
-                buffer--;
-            }
+            while (*buffer && *buffer++ != '\n');
+            continue;
         }
         buffer++;
     }
