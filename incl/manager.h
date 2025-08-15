@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-typedef enum key {ARM, GPU, OV} Key;
+typedef enum key {ARM, GPU, OV, INVALID} Key;
 typedef struct value_list *List;
 
 List create_list(void);

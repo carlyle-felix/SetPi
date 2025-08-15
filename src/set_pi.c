@@ -4,6 +4,8 @@
 
 #include "../incl/manager.h"
 
+Key enum_key(char *arg);
+
 int main(int argc, char *argv[])
 {
     List l;
@@ -24,12 +26,10 @@ int main(int argc, char *argv[])
     }
 
     if (!strcmp(argv[1], "show")) {
-        if (!strcmp(argv[2], "cpu")) {
-            k = ARM;
-        } else if (!strcmp(argv[2], "gpu")) {
-            k = GPU;
-        } else if (!strcmp(argv[2], "ov")) {
-            k = OV;
+        k = enum_key(argv[2]);
+        if (k == INVALID) {
+            printf("error: invalid key %s.\n", argv[2]);
+            return -1;
         }
         printf("%s", current_value(k));
 
@@ -38,15 +38,11 @@ int main(int argc, char *argv[])
 
     l = create_list();
     for (i = 1; i < argc; i++) {
-	if (!strcmp(argv[i], "cpu")) {
-            k = ARM;
-        } else if (!strcmp(argv[i], "gpu")) {
-            k = GPU;
-        } else if (!strcmp(argv[i], "ov")) {
-            k = OV;
-        } else {
+	k = enum_key(argv[i]);
+        if (k == INVALID) {
             continue;
         }
+
         j = set_value(l, k, argv[++i]);
         if (j) {
             printf("failed.\n");
@@ -58,4 +54,17 @@ int main(int argc, char *argv[])
     delete_list(l);
 
     return 0;
+}
+
+Key enum_key(char *arg)
+{
+    if (!strcmp(arg, "cpu")) {
+        return ARM;
+    } else if (!strcmp(arg, "gpu")) {
+        return GPU;
+    } else if (!strcmp(arg, "ov")) {
+        return OV;
+    }
+
+    return INVALID;
 }
