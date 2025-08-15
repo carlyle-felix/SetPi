@@ -9,7 +9,6 @@ int main(int argc, char *argv[])
     List l;
     register uint8_t i;
     uint8_t j;
-    Key k;
 
     // check privilege
     if (!getuid())
@@ -24,7 +23,7 @@ int main(int argc, char *argv[])
     }
 
     l = create_list();
-    for (i = 2; i < argc; i++) {
+    for (i = 1; i < argc; i++) {
 	if (!strcmp(argv[i], "cpu")) {
             k = ARM;
         } else if (!strcmp(argv[i], "gpu")) {

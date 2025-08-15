@@ -124,7 +124,7 @@ int8_t write_config(List l)
     if (!buffer) {
         return -1;
     }
-printf("key1: %s\n", key[0]);
+
     // allocate additional MAX_BUFFER bytes for changes.
     buffer = realloc(buffer, strlen(buffer) + MAX_BUFFER);
     if (!buffer) {
