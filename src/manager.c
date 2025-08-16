@@ -14,10 +14,16 @@ struct value_list {
     char *ov;
 };
 
+typedef struct {
+    char *fs;
+    char *part;
+} Dev;
+
 char *get_buffer(const char *p);
 void truncate(char *buffer, uint16_t pos, uint8_t t_len);
 void expand(char *buffer, uint16_t pos, uint8_t t_len);
 void *mem_alloc(uint16_t n);
+char *find_fs(const char *mp);
 
 List create_list(void)
 {
@@ -124,7 +130,7 @@ int8_t write_config(List l)
     if (!path) {
         return -1;
     }
-    
+
     buffer = get_buffer(path);
     free(path);
     if (!buffer) {
@@ -145,16 +151,16 @@ int8_t write_config(List l)
 
         // if a value in the list is empty, skip it.
         switch (i) {
-            
+
             case 0:
                 if (!l->arm_freq) {
                     continue;
                 }
-                
+
                 strcpy(value, l->arm_freq);
                 break;
 
-            case 1:     
+            case 1:
                 if (!l->gpu_freq) {
                     continue;
                 }
@@ -162,7 +168,7 @@ int8_t write_config(List l)
                 strcpy(value, l->gpu_freq);
                 break;
 
-            case 2:     
+            case 2:
                 if (!l->ov) {
                     continue;
                 }
@@ -230,7 +236,7 @@ int8_t write_config(List l)
     }
 
 	printf("%s\n", buffer_);
- /*   
+ /*
     // TODO: gain root here.
     fp = fopen(path, "w");
     free(path);
@@ -251,7 +257,7 @@ int8_t write_config(List l)
 */
 
     free(buffer_);  // buffer placeholder
-    
+
     return 0;
 }
 
@@ -383,4 +389,79 @@ char *get_buffer(const char *p)
     buffer[read] = '\0';
 
     return buffer;
+}
+
+Dev *get_dev(const char *mp)
+{
+	char *buffer, *buffer_, str[MAX_STR];
+        register uint8_t i;
+        Dev *d;
+
+        buffer = get_buffer("/etc/fstab")
+        if (!buffer) {
+            return NULL;
+        }
+
+        d = mem_alloc(sizeof(d));
+        if (!d) {
+            free(buffer);
+            return NULL;
+        }
+
+        buffer_ = buffer;
+        while (*buffer) {
+            if (*buffer == '#') {
+                while (*buffer && *buffer++ != '\n');
+            }
+
+            for (i = 0; *buffer == mp[i]; i++) {
+                buffer++;
+            }
+
+            if (i == strlen(mp)) {
+                while (*buffer++ == ' ');
+
+                for (i = 0; *buffer != ' '; i++) {
+                    str[i] = *buffer++;
+                }
+                str[i] = '\0';
+
+                d.->fs = mem_alloc(strlen(str) + 1);
+                if (!d->fs) {
+                    free(buffer_);
+                    free(d);
+                    return NULL;
+                }
+                strcpy(d->fs, str);
+
+                while (*buffer != '\n') {
+                    *buffer--;
+                }
+
+                str[0] = '\0';
+                for (i = 0; *buffer != ' '; i++) {
+                    str[i] = *buffer++;
+                }
+                str[i] = '\0';
+
+		d->part = mem_alloc(strlen(str) + 1);
+                if (!d->part) {
+                    free(buffer_);
+                    free(d->fs);
+                    free(d);
+                    return NULL;
+                }
+                strcpy(d->part, str);
+
+                break;
+
+            } else {
+                while (i--) {
+                    buffer--;
+            }
+            buffer++;
+        }
+        free(buffer_);
+
+        return d;
 }
