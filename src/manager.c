@@ -15,18 +15,11 @@ struct value_list {
     char *ov;
 };
 
-typedef struct {
-    char *fs;
-    char *part;
-    char *opts;
-} *Dev;
-
 char *get_buffer(const char *p);
 void truncate(char *buffer, uint16_t pos, uint8_t t_len);
 void expand(char *buffer, uint16_t pos, uint8_t t_len);
 void *mem_alloc(uint16_t n);
-Dev get_dev(const char *mp);
-int mount_part(const char *part);
+uint8_t mount_part(const char *mountpoint);
 
 List create_list(void)
 {
@@ -238,6 +231,12 @@ int8_t write_config(List l)
         }
     }
 
+    i = mount_part("/boot");
+    if (i) {
+        printf("unable to mount /boot");
+        return i;
+    }
+
 	printf("%s\n", buffer_);
  /*
     // TODO: gain root here.
@@ -397,21 +396,14 @@ char *get_buffer(const char *p)
 /*
     NOTE: caller must free members and struct pointer
 */
-Dev get_dev(const char *mp) 
+uint8_t mount_part(const char *mountpoint) 
 {
-    char *buffer, *buffer_, str[MAX_STR];
+    char *buffer, *buffer_, opts[MAX_STR], fs[MAX_STR], dev[MAX_STR];
     register uint8_t i;
-    Dev d;
 
     buffer = get_buffer("/etc/fstab");
     if (!buffer) {
-        return NULL;
-    }
-
-    d = mem_alloc(sizeof(d));
-    if (!d) {
-        free(buffer);
-        return NULL;
+        return -1;
     }
 
     buffer_ = buffer;
@@ -420,28 +412,20 @@ Dev get_dev(const char *mp)
             while (*buffer && *buffer++ != '\n');
         }
 
-        for (i = 0; *buffer == mp[i]; i++) {
+        for (i = 0; *buffer == mountpoint[i]; i++) {
             buffer++;
         }
 
-        if (i == strlen(mp)) {
+        if (i == strlen(mountpoint)) {
             // filesystem.
             while (*buffer == '\t' || *buffer == ' ') {
                 buffer++;
             }
             
             for (i = 0; *buffer != '\t' && *buffer != ' '; i++) {
-                str[i] = *buffer++;
+                fs[i] = *buffer++;
             }
-            str[i] = '\0';
-
-            d->fs = mem_alloc(strlen(str) + 1);
-            if (!d->fs) {
-                free(buffer_);
-                free(d);
-                return NULL;
-            }
-            strcpy(d->fs, str);
+            fs[i] = '\0';
 
             // opts.
             while (*buffer == '\t' || *buffer == ' ') {
@@ -449,18 +433,9 @@ Dev get_dev(const char *mp)
             }
             
             for (i = 0; *buffer != '\t' && *buffer != ' '; i++) {
-                str[i] = *buffer++;
+                opts[i] = *buffer++;
             }
-            str[i] = '\0';
-
-            d->opts = mem_alloc(strlen(str) + 1);
-            if (!d->opts) {
-                free(buffer_);
-                free(d->fs);
-                free(d);
-                return NULL;
-            }
-            strcpy(d->opts, str);
+            opts[i] = '\0';
 
             // partition
             while (*buffer != '\n') {
@@ -468,21 +443,10 @@ Dev get_dev(const char *mp)
             }
             buffer++;
 
-            str[0] = '\0';
             for (i = 0; *buffer != '\t' && *buffer != ' '; i++) {
-                str[i] = *buffer++;
+                dev[i] = *buffer++;
             }
-            str[i] = '\0';
-
-            d->part = mem_alloc(strlen(str) + 1);
-            if (!d->part) {
-                free(buffer_);
-                free(d->fs);
-                free(d->opts);
-                free(d);
-                return NULL;
-            }
-            strcpy(d->part, str);
+            dev[i] = '\0';
 
             break;
 
@@ -495,25 +459,5 @@ Dev get_dev(const char *mp)
     }
     free(buffer_);
 
-    return d;
-}
-
-int mount_part(const char *part)
-{
-    Dev d;
-    int8_t result;
-    
-    d = get_dev(part);
-    if (!d) {
-        return -1;
-    }
-
-    result = mount(d->part, part, d->fs, 0, d->opts);
-
-    free(d->part);
-    free(d->fs);
-    free(d->opts);
-    free(d);
-
-    return result;
+    return mount(dev, mountpoint, fs, 0, opts);
 }
