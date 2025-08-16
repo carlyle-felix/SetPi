@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mount.h>
 
 #include "../incl/manager.h"
 
@@ -17,13 +18,15 @@ struct value_list {
 typedef struct {
     char *fs;
     char *part;
-} Dev;
+    char *opts;
+} *Dev;
 
 char *get_buffer(const char *p);
 void truncate(char *buffer, uint16_t pos, uint8_t t_len);
 void expand(char *buffer, uint16_t pos, uint8_t t_len);
 void *mem_alloc(uint16_t n);
-char *find_fs(const char *mp);
+Dev get_dev(const char *mp);
+int mount_part(const char *part);
 
 List create_list(void)
 {
@@ -204,34 +207,34 @@ int8_t write_config(List l)
                 while (*buffer != '=') {
                     buffer--;
                 }
-		buffer++;
+		        buffer++;
 
                 // truncate or expand the buffer
-		j = 0;
-		len = strlen(value);
+		        j = 0;
+		        len = strlen(value);
                 if (len > k) {
                     expand(buffer_, buffer - buffer_, (len - k));
-		} else if (len < k) {
+		        } else if (len < k) {
                     truncate(buffer_, (buffer + len) - buffer_, k - len);
-     		}
+     		    }
 
                 j = 0;
                 while (value[j]) {
                     *buffer++ = value[j++];
                 }
 
-		break;
+		        break;
 
             } else {
                 while (*buffer && *buffer++ != '\n');
                 continue;
             }
 
-	    if (!(*buffer)) {
-		sprintf(str, "\n%s=%s", key[i], value);
-		strcat(buffer_, str);
-		break;
-	    }
+            if (!(*buffer)) {
+                sprintf(str, "\n%s=%s", key[i], value);
+                strcat(buffer_, str);
+                break;
+            }
         }
     }
 
@@ -391,77 +394,126 @@ char *get_buffer(const char *p)
     return buffer;
 }
 
-Dev *get_dev(const char *mp)
+/*
+    NOTE: caller must free members and struct pointer
+*/
+Dev get_dev(const char *mp) 
 {
-	char *buffer, *buffer_, str[MAX_STR];
-        register uint8_t i;
-        Dev *d;
+    char *buffer, *buffer_, str[MAX_STR];
+    register uint8_t i;
+    Dev d;
 
-        buffer = get_buffer("/etc/fstab")
-        if (!buffer) {
-            return NULL;
+    buffer = get_buffer("/etc/fstab");
+    if (!buffer) {
+        return NULL;
+    }
+
+    d = mem_alloc(sizeof(d));
+    if (!d) {
+        free(buffer);
+        return NULL;
+    }
+
+    buffer_ = buffer;
+    while (*buffer) {
+        if (*buffer == '#') {
+            while (*buffer && *buffer++ != '\n');
         }
 
-        d = mem_alloc(sizeof(d));
-        if (!d) {
-            free(buffer);
-            return NULL;
-        }
-
-        buffer_ = buffer;
-        while (*buffer) {
-            if (*buffer == '#') {
-                while (*buffer && *buffer++ != '\n');
-            }
-
-            for (i = 0; *buffer == mp[i]; i++) {
-                buffer++;
-            }
-
-            if (i == strlen(mp)) {
-                while (*buffer++ == ' ');
-
-                for (i = 0; *buffer != ' '; i++) {
-                    str[i] = *buffer++;
-                }
-                str[i] = '\0';
-
-                d.->fs = mem_alloc(strlen(str) + 1);
-                if (!d->fs) {
-                    free(buffer_);
-                    free(d);
-                    return NULL;
-                }
-                strcpy(d->fs, str);
-
-                while (*buffer != '\n') {
-                    *buffer--;
-                }
-
-                str[0] = '\0';
-                for (i = 0; *buffer != ' '; i++) {
-                    str[i] = *buffer++;
-                }
-                str[i] = '\0';
-
-		d->part = mem_alloc(strlen(str) + 1);
-                if (!d->part) {
-                    free(buffer_);
-                    free(d->fs);
-                    free(d);
-                    return NULL;
-                }
-                strcpy(d->part, str);
-
-                break;
-
-            } else {
-                while (i--) {
-                    buffer--;
-            }
+        for (i = 0; *buffer == mp[i]; i++) {
             buffer++;
         }
-        free(buffer_);
 
-        return d;
+        if (i == strlen(mp)) {
+            // filesystem.
+            while (*buffer == '\t' || *buffer == ' ') {
+                buffer++;
+            }
+            
+            for (i = 0; *buffer != '\t' && *buffer != ' '; i++) {
+                str[i] = *buffer++;
+            }
+            str[i] = '\0';
+
+            d->fs = mem_alloc(strlen(str) + 1);
+            if (!d->fs) {
+                free(buffer_);
+                free(d);
+                return NULL;
+            }
+            strcpy(d->fs, str);
+
+            // opts.
+            while (*buffer == '\t' || *buffer == ' ') {
+                buffer++;
+            }
+            
+            for (i = 0; *buffer != '\t' && *buffer != ' '; i++) {
+                str[i] = *buffer++;
+            }
+            str[i] = '\0';
+
+            d->opts = mem_alloc(strlen(str) + 1);
+            if (!d->opts) {
+                free(buffer_);
+                free(d->fs);
+                free(d);
+                return NULL;
+            }
+            strcpy(d->opts, str);
+
+            // partition
+            while (*buffer != '\n') {
+                buffer--;
+            }
+            buffer++;
+
+            str[0] = '\0';
+            for (i = 0; *buffer != '\t' && *buffer != ' '; i++) {
+                str[i] = *buffer++;
+            }
+            str[i] = '\0';
+
+            d->part = mem_alloc(strlen(str) + 1);
+            if (!d->part) {
+                free(buffer_);
+                free(d->fs);
+                free(d->opts);
+                free(d);
+                return NULL;
+            }
+            strcpy(d->part, str);
+
+            break;
+
+        } else {
+            while (i--) {
+                buffer--;
+            }
+        }
+        buffer++;
+    }
+    free(buffer_);
+
+    return d;
+}
+
+int mount_part(const char *part)
+{
+    Dev d;
+    int8_t result;
+    
+    d = get_dev(part);
+    if (!d) {
+        return -1;
+    }
+
+    result = mount(d->part, part, d->fs, 0, d->opts);
+
+    free(d->part);
+    free(d->fs);
+    free(d->opts);
+    free(d);
+
+    return result;
 }
