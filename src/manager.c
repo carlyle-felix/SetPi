@@ -135,7 +135,8 @@ int8_t write_config(List l)
 {
     FILE *fp;
     register uint8_t i, j, k;
-    uint8_t num_keys, key_len, len;
+    uint8_t num_keys, key_len;
+    uint16_t len;
     const char *key[] = KEYS;
     char *buffer, *path, *buffer_, value[MAX_STR], str[MAX_BUFFER];
     
@@ -150,14 +151,15 @@ int8_t write_config(List l)
     }
 
     buffer = get_buffer(path);
-    free(path);
     if (!buffer) {
+        free(path);
         return -1;
     }
 
     // allocate additional MAX_BUFFER bytes for changes.
     buffer = mem_realloc(buffer, strlen(buffer) + MAX_BUFFER);
     if (!buffer) {
+        free(path);
         return -1;
     }
 
@@ -250,26 +252,24 @@ int8_t write_config(List l)
         }
     }
 
-    
-	printf("%s\n", buffer_);
-
-/*
+    // write buffer to config.txt
     fp = fopen(path, "w");
     free(path);
     if (!fp) {
         printf("error: failed to open config.txt in write_config().\n");
-        free(str);
+        free(buffer_);
         return -1;
     }
 
-    len = fwrite(buffer, sizeof(char), strlen(buffer) + 1, fp);
-    if (len < (strlen(buffer) + 1)) {
+    len = fwrite(buffer_, sizeof(char), strlen(buffer_), fp);
+    if (len < strlen(buffer_)) {
+        free(buffer_);
         printf("error: failed to write new config.txt.\n");
-        free(str);
+        fclose(fp);
         return -1;
     }
     fclose(fp);
-*/  free(buffer_);
+    free(buffer_);
 
     if (umount("/boot")) {
         printf("info: failed to unmount /boot.\n");
@@ -479,7 +479,7 @@ int8_t mount_part(const char *mountpoint)
         buffer++;
     }
     free(buffer_);
-    
+
     return mount(dev, mountpoint, fs, 0, NULL);
 }
 
