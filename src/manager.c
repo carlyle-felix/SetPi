@@ -422,7 +422,7 @@ int8_t mount_part(const char *mountpoint)
 {
     char *buffer, *buffer_, fs[MAX_STR], dev[MAX_STR];
     register uint8_t i;
-    uint8_t status;
+    int8_t status;
 
     status = is_mounted("/boot");
 
