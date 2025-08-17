@@ -1,10 +1,21 @@
-FLAGS	=	-Wall -g
+FLAGS	=	-Wall -Wextra -g
 
-set_pi: set_pi.o manager.o
-	gcc -o set_pi src/set_pi.c src/manager.c ${FLAGS}
+setpi: setpi.o manager.o
+	gcc -o setpi src/setpi.c src/manager.c ${FLAGS}
 
-set_pi.o: src/set_pi.c incl/manager.h
-	gcc -c src/set_pi.c
+setpi.o: src/setpi.c incl/manager.h
+	gcc -c src/setpi.c
 
 manager.o: src/manager.c incl/manager.h
 	gcc -c src/manager.c
+
+.PHONY: clean install
+
+clean: 
+		rm setpi setpi.o manager.o
+
+install: setpi
+		install -m 755 setpi /usr/local/bin
+
+uninstall: 
+		rm /usr/local/bin/setpi

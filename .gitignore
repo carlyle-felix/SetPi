@@ -1,6 +1,4 @@
 /.vscode
 /manager.o
-/pi-freq
-/pi-freq.o
-/set_pi
-/set_pi.o
+/setpi
+/setpi.o
