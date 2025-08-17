@@ -55,7 +55,11 @@ int main(int argc, char *argv[])
         }
     }
 
-    write_config(l);
+    j = write_config(l);
+    if (j) {
+        delete_list(l);
+        return -1;
+    }
     delete_list(l);
 
     return 0;

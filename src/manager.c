@@ -53,6 +53,20 @@ void *mem_alloc(uint16_t n)
     return p;
 }
 
+void *mem_realloc(void *p, uint16_t n)
+{
+    void *new;
+
+    new = realloc(p, n);
+    if (!new) {
+        free(p);
+        printf("error: unable to reallocate memory for pointer.\n");
+        return NULL;
+    }
+
+    return new;
+}
+
 int8_t set_value(List l, Key k, const char *value)
 {
     switch (k) {
@@ -100,13 +114,15 @@ char *config_path(void)
     if (!p) {
         return NULL;
     }
-        // /boot/firmware/config.txt", "r"
+    
+    // /boot/firmware/config.txt", "r"
     if ((fp = fopen("/home/carlyle/config.txt", "r"))) {
         strcpy(p, "/home/carlyle/config.txt");
     } else if ((fp = fopen("/boot/config.txt", "r"))) {
         strcpy(p, "/boot/config.txt");
     } else {
         printf("error: unable to locate config.txt.\n");
+        free(p);
         return NULL;
     }
     fclose(fp);
@@ -134,9 +150,8 @@ int8_t write_config(List l)
     }
 
     // allocate additional MAX_BUFFER bytes for changes.
-    buffer = realloc(buffer, strlen(buffer) + MAX_BUFFER);
+    buffer = mem_realloc(buffer, strlen(buffer) + MAX_BUFFER);
     if (!buffer) {
-        printf("error: failed to reallocate memory buffer in write_config().\n");
         return -1;
     }
 
@@ -185,14 +200,12 @@ int8_t write_config(List l)
             }
 
             j = 0;
-            while (*buffer == key[i][j]) {
-                buffer++;
+            while (*buffer++ == key[i][j]) {
                 j++;
             }
 
             k = 0;
             if (j == key_len) {
-                buffer++;   // go to character after '='
                 while (*buffer && *buffer++ != '\n') {
                     k++;
                 }
@@ -231,15 +244,16 @@ int8_t write_config(List l)
         }
     }
 
+    
+	printf("%s\n", buffer_);
+/*
+    // TODO: gain root here.
     i = mount_part("/boot");
     if (i) {
         printf("unable to mount /boot");
         return i;
     }
 
-	printf("%s\n", buffer_);
- /*
-    // TODO: gain root here.
     fp = fopen(path, "w");
     free(path);
     if (!fp) {
@@ -258,7 +272,7 @@ int8_t write_config(List l)
     // TODO: drop root here.
 */
 
-    free(buffer_);  // buffer placeholder
+    free(buffer_);
 
     return 0;
 }
@@ -369,19 +383,21 @@ char *get_buffer(const char *p)
     for (;;) {
 
         fp = fopen(p, "r");
-        if (!p) {
+        if (!fp) {
             printf("error: unable to open %s.\n", p);
+            free(buffer);
             return NULL;
         }
 
         read = fread(buffer, sizeof(char), n, fp);
         if (read == n) {
             n *= 2;
-            buffer = realloc(buffer, n);
+            buffer = mem_realloc(buffer, n);
             if (!buffer) {
-                printf("error: unable to reallocate memory for buffer in get_buffer().\n");
+                fclose(fp);
                 return NULL;
             }
+            fclose(fp);
             continue;
         }
 
