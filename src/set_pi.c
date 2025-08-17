@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
     char *str;
 
     // check privilege
-    if (!getuid())
+    if (getuid())
     {
         printf("error: pi-freq needs root privileges.\n");
         return -1;

@@ -19,7 +19,8 @@ char *get_buffer(const char *p);
 void truncate(char *buffer, uint16_t pos, uint8_t t_len);
 void expand(char *buffer, uint16_t pos, uint8_t t_len);
 void *mem_alloc(uint16_t n);
-uint8_t mount_part(const char *mountpoint);
+int8_t mount_part(const char *mountpoint);
+int8_t is_mounted(char *mountpoint);
 
 List create_list(void)
 {
@@ -116,8 +117,8 @@ char *config_path(void)
     }
     
     // /boot/firmware/config.txt", "r"
-    if ((fp = fopen("/home/carlyle/config.txt", "r"))) {
-        strcpy(p, "/home/carlyle/config.txt");
+    if ((fp = fopen("/boot/firmware/config.txt", "r"))) {
+        strcpy(p, "/boot/firmware/config.txt");
     } else if ((fp = fopen("/boot/config.txt", "r"))) {
         strcpy(p, "/boot/config.txt");
     } else {
@@ -137,7 +138,12 @@ int8_t write_config(List l)
     uint8_t num_keys, key_len, len;
     const char *key[] = KEYS;
     char *buffer, *path, *buffer_, value[MAX_STR], str[MAX_BUFFER];
-
+    
+    if (mount_part("/boot")) {
+        printf("error: unable to mount /boot\n");
+        return -1;
+    }
+    
     path = config_path();
     if (!path) {
         return -1;
@@ -246,14 +252,8 @@ int8_t write_config(List l)
 
     
 	printf("%s\n", buffer_);
-/*
-    // TODO: gain root here.
-    i = mount_part("/boot");
-    if (i) {
-        printf("unable to mount /boot");
-        return i;
-    }
 
+/*
     fp = fopen(path, "w");
     free(path);
     if (!fp) {
@@ -269,10 +269,11 @@ int8_t write_config(List l)
         return -1;
     }
     fclose(fp);
-    // TODO: drop root here.
-*/
+*/  free(buffer_);
 
-    free(buffer_);
+    if (umount("/boot")) {
+        printf("info: failed to unmount /boot.\n");
+    }
 
     return 0;
 }
@@ -311,6 +312,11 @@ char *current_value(Key k)
     const char *key[] = KEYS;
     char *path, *buffer, *buffer_, value[MAX_STR], *str;
     register uint8_t i;
+
+    if (mount_part("/boot")) {
+        printf("error: unable to mount /boot\n");
+        return NULL;
+    }
 
     path = config_path();
     if (!path) {
@@ -353,15 +359,18 @@ char *current_value(Key k)
         free(buffer_);
         return "key not found.";
     }
+    free(buffer_);
 
     str = mem_alloc(strlen(value) + 1);
     if (!str) {
-        free(buffer_);
+        
         return NULL;
     }
     strcpy(str, value);
 
-    free(buffer_);
+    if (umount("/boot")) {
+        printf("info: unable to unmount /boot.\n");
+    }
 
     return str;
 }
@@ -409,13 +418,19 @@ char *get_buffer(const char *p)
     return buffer;
 }
 
-/*
-    NOTE: caller must free members and struct pointer
-*/
-uint8_t mount_part(const char *mountpoint) 
+int8_t mount_part(const char *mountpoint) 
 {
-    char *buffer, *buffer_, opts[MAX_STR], fs[MAX_STR], dev[MAX_STR];
+    char *buffer, *buffer_, fs[MAX_STR], dev[MAX_STR];
     register uint8_t i;
+    uint8_t status;
+
+    status = is_mounted("/boot");
+
+    if (status > 0) {
+        return 0;
+    } else if (status < 0) {
+        return -1;
+    }
 
     buffer = get_buffer("/etc/fstab");
     if (!buffer) {
@@ -443,16 +458,6 @@ uint8_t mount_part(const char *mountpoint)
             }
             fs[i] = '\0';
 
-            // opts.
-            while (*buffer == '\t' || *buffer == ' ') {
-                buffer++;
-            }
-            
-            for (i = 0; *buffer != '\t' && *buffer != ' '; i++) {
-                opts[i] = *buffer++;
-            }
-            opts[i] = '\0';
-
             // partition
             while (*buffer != '\n') {
                 buffer--;
@@ -474,6 +479,32 @@ uint8_t mount_part(const char *mountpoint)
         buffer++;
     }
     free(buffer_);
+    
+    return mount(dev, mountpoint, fs, 0, NULL);
+}
 
-    return mount(dev, mountpoint, fs, 0, opts);
+int8_t is_mounted(char *mountpoint)
+{
+    char *buffer, *buffer_;
+    register uint8_t i;
+
+    buffer = get_buffer("/proc/mounts");
+    if (!buffer) {
+        return -1;
+    }
+
+    buffer_ = buffer;
+    while (*buffer++) {
+        for (i = 0; *buffer == mountpoint[i]; i++) {
+            buffer++;
+        }
+
+        if (i == strlen(mountpoint)) {
+            free(buffer_);
+            return 1;
+        }
+    }
+
+    free(buffer_);
+    return 0;
 }
