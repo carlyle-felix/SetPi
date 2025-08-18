@@ -15,8 +15,7 @@ struct node {
 };
 
 char *get_buffer(const char *p);
-void truncate(char *buffer, uint16_t pos, uint8_t t_len);
-void expand(char *buffer, uint16_t pos, uint8_t t_len);
+void resize_buffer(char *buffer, uint16_t pos, uint8_t new_len, uint8_t cur_len);
 void *mem_alloc(uint16_t n);
 int8_t mount_part(const char *mountpoint);
 int8_t is_mounted(char *mountpoint);
@@ -205,13 +204,11 @@ int8_t write_config(List l)
                     buffer--;
                 }
 
-                // truncate or expand the buffer.
+                // resize the buffer.
 		        len = strlen(temp->value);
-                if (len > i) {
-                    expand(buffer_, buffer - buffer_, (len - i));
-		        } else if (len < i) {
-                    truncate(buffer_, (buffer + len) - buffer_, (i - len));
-     		    }
+                if (len != i) {
+                    resize_buffer(buffer_, (buffer - buffer_), len, i);
+		        } 
 
                 for (i = 0; temp->value[i]; i++) {
                     *buffer++ = temp->value[i];
@@ -270,31 +267,33 @@ int8_t write_config(List l)
     return 0;
 }
 
-// TODO: merge expand/truncate.
-void truncate(char *buffer, uint16_t pos, uint8_t t_len)
+/*
+    move buffer left or right after a specified position, expanding or truncating 
+    the buffer to accomodate the new value.
+*/
+void resize_buffer(char *buffer, uint16_t pos, uint8_t new_len, uint8_t cur_len)
 {
-    uint32_t b_len;
+    uint32_t buffer_len;
     register uint32_t i;
+    uint8_t diff;
     char *str = buffer;
 
-    b_len = strlen(buffer);
-    for (i = pos; i < (b_len - t_len); i++) {
-        str[i] = str[i + t_len];
-    }
-    str[i] = '\0';
-}
+    buffer_len = strlen(buffer);
 
-void expand(char *buffer, uint16_t pos, uint8_t e_len)
-{
-    uint32_t b_len;
-    register uint32_t i;
-    char *str = buffer;
-
-    b_len = strlen(buffer);
-    for (i = b_len + e_len; i > pos; i--) {
-        str[i] = str[i - e_len];
+    if (new_len > cur_len) {
+        diff = new_len - cur_len;
+        for (i = buffer_len + diff; i > pos; i--) {
+            str[i] = str[i - diff];
+        }
+        str[buffer_len + diff + 1] = '\0';
+    } else {
+        diff = cur_len - new_len;
+        for (i = pos; i < (buffer_len - diff); i++) {
+            str[i] = str[i + diff];
+        }
+        str[i] = '\0';
     }
-    str[b_len + e_len + 1] = '\0';
+    
 }
 
 List get_values(List l)
