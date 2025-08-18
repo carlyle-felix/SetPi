@@ -173,9 +173,6 @@ int8_t write_config(List l)
         return -1;
     }
 
-    // allocate additional MAX_BUFFER bytes for changes.
-    
-
     buffer_ = buffer;
     for (temp = l; temp; temp = temp->next) {
         key_len = strlen(temp->key);
