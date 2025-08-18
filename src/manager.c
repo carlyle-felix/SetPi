@@ -15,8 +15,9 @@ struct node {
 };
 
 char *get_buffer(const char *p);
-void resize_buffer(char *buffer, uint16_t pos, uint8_t new_len, uint8_t cur_len);
+char *resize_buffer(char *buffer, uint16_t pos, uint8_t new_len, uint8_t cur_len);
 void *mem_alloc(uint16_t n);
+void *mem_realloc(void *p, uint16_t n);
 int8_t mount_part(const char *mountpoint);
 int8_t is_mounted(char *mountpoint);
 
@@ -133,7 +134,6 @@ char *config_path(void)
         return NULL;
     }
     
-    // /boot/firmware/config.txt", "r"
     if ((fp = fopen("/boot/firmware/config.txt", "r"))) {
         strcpy(p, "/boot/firmware/config.txt");
     } else if ((fp = fopen("/boot/config.txt", "r"))) {
@@ -154,7 +154,7 @@ int8_t write_config(List l)
     List temp;
     register uint8_t i;
     uint8_t key_len;
-    uint16_t len;
+    uint16_t len, pos;
     char *buffer, *path, *buffer_, str[MAX_BUFFER];
     
     if (mount_part("/boot")) {
@@ -174,11 +174,7 @@ int8_t write_config(List l)
     }
 
     // allocate additional MAX_BUFFER bytes for changes.
-    buffer = mem_realloc(buffer, strlen(buffer) + MAX_BUFFER);
-    if (!buffer) {
-        free(path);
-        return -1;
-    }
+    
 
     buffer_ = buffer;
     for (temp = l; temp; temp = temp->next) {
@@ -204,10 +200,12 @@ int8_t write_config(List l)
                     buffer--;
                 }
 
-                // resize the buffer.
+                // resize the buffer and update pointers.
 		        len = strlen(temp->value);
                 if (len != i) {
-                    resize_buffer(buffer_, (buffer - buffer_), len, i);
+                    pos = buffer - buffer_;
+                    buffer_ = resize_buffer(buffer_, pos, len, i);
+                    buffer = (buffer_ + pos);
 		        } 
 
                 for (i = 0; temp->value[i]; i++) {
@@ -257,7 +255,6 @@ int8_t write_config(List l)
         return -1;
     }
     fclose(fp);
-
     free(buffer_);
 
     if (umount("/boot")) {
@@ -267,33 +264,45 @@ int8_t write_config(List l)
     return 0;
 }
 
-/*
-    move buffer left or right after a specified position, expanding or truncating 
-    the buffer to accomodate the new value.
-*/
-void resize_buffer(char *buffer, uint16_t pos, uint8_t new_len, uint8_t cur_len)
+char *resize_buffer(char *buffer, uint16_t pos, uint8_t new_len, uint8_t cur_len)
 {
     uint32_t buffer_len;
     register uint32_t i;
     uint8_t diff;
-    char *str = buffer;
+    char *str;
 
     buffer_len = strlen(buffer);
-
     if (new_len > cur_len) {
         diff = new_len - cur_len;
-        for (i = buffer_len + diff; i > pos; i--) {
+
+        // expand buffer.
+        buffer = mem_realloc(buffer, buffer_len + diff + 1);
+        if (!(buffer)) {
+            return NULL;
+        }
+        str = buffer;
+
+        buffer_len = buffer_len + diff;       // new buffer length.
+        for (i = buffer_len; i > pos; i--) {
             str[i] = str[i - diff];
         }
-        str[buffer_len + diff + 1] = '\0';
     } else {
+        str = buffer;
         diff = cur_len - new_len;
+
         for (i = pos; i < (buffer_len - diff); i++) {
             str[i] = str[i + diff];
         }
         str[i] = '\0';
+
+        // shrink buffer.
+        buffer = mem_realloc(buffer, buffer_len - diff + 1);
+        if (!(buffer)) {
+            return NULL;
+        }
     }
     
+    return buffer;
 }
 
 List get_values(List l)
