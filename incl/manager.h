@@ -3,13 +3,13 @@
 
 #include <stdint.h>
 
-typedef enum key {ARM, GPU, OV, INVALID} Key;
-typedef struct value_list *List;
+typedef struct node *List;
 
 List create_list(void);
 void delete_list(List l);
-int8_t set_value(List l, Key k, const char *value);
+List add_item(List l, const char *item);
 int8_t write_config(List l);
-char *current_value(Key k);
+List get_values(List l);
+void print_list(List l);
 
 #endif

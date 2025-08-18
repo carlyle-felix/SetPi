@@ -5,14 +5,13 @@
 
 #include "../incl/manager.h"
 
-#define KEYS {"arm_freq", "gpu_freq", "over_voltage_delta"}
 #define MAX_BUFFER 256
 #define MAX_STR 128
 
-struct value_list {
-    char *arm_freq;
-    char *gpu_freq;
-    char *ov;
+struct node {
+    char *key;
+    char *value;
+    struct node *next;
 };
 
 char *get_buffer(const char *p);
@@ -24,23 +23,29 @@ int8_t is_mounted(char *mountpoint);
 
 List create_list(void)
 {
-    List l = mem_alloc(sizeof(struct value_list));
+    List l = mem_alloc(sizeof(struct node));
     if (!l) {
         return NULL;
     }
-    l->arm_freq = NULL;
-    l->gpu_freq = NULL;
-    l->ov = NULL;
+    l->key = NULL;
+    l->value = NULL;
+    l->next = NULL;
 
     return l;
 }
 
 void delete_list(List l)
 {
-    free(l->arm_freq);
-    free(l->gpu_freq);
-    free(l->ov);
-    free(l);
+    List temp;
+
+    while (l) {
+        temp = l;
+        l = l->next;
+
+        free(temp->key);
+        free(temp->value);
+        free(temp);
+    }
 }
 
 void *mem_alloc(uint16_t n)
@@ -68,39 +73,52 @@ void *mem_realloc(void *p, uint16_t n)
     return new;
 }
 
-int8_t set_value(List l, Key k, const char *value)
+List add_item(List l, const char *item)
 {
-    switch (k) {
+    List temp;
+    char str[MAX_STR];
+    register uint8_t i;
 
-        case ARM:
-            l->arm_freq = mem_alloc(strlen(value) + 1);
-            if (!l->arm_freq) {
-                return -1;
-            }
-            strcpy(l->arm_freq, value);
-            break;
-
-        case GPU:
-            l->gpu_freq = mem_alloc(strlen(value) + 1);
-            if (!l->gpu_freq) {
-                return -1;
-            }
-            strcpy(l->gpu_freq, value);
-            break;
-
-        case OV:
-            l->ov = mem_alloc(strlen(value) + 1);
-            if (!l->ov) {
-                return -1;
-            }
-            strcpy(l->ov, value);
-            break;
-
-        default:
-            break;
+    if (!l->key) {
+        free(l);
+        l = NULL;
+    }
+    
+    temp = mem_alloc(sizeof(struct node));
+    if (!temp) {
+        return NULL;
     }
 
-    return 0;
+    for (i = 0; *item && *item != '='; i++) {
+        str[i] = *item++;
+    }
+    str[i] = '\0';
+    
+    temp->key = mem_alloc(i + 1);
+    if (!temp->key) {
+        return NULL;
+    }
+    strcpy(temp->key, str);
+
+    if (*item) {
+        for (i = 0; *item++; i++) {
+            str[i] = *item;
+        }
+        str[i] = '\0';
+
+        temp->value = mem_alloc(i + 1);
+        if (!temp->value) {
+            return NULL;
+        }
+        strcpy(temp->value, str);
+    } else {
+        temp->value = NULL;
+    }
+
+    temp->next = l;
+    l = temp;
+    
+    return l;
 }
 
 /*
@@ -134,11 +152,11 @@ char *config_path(void)
 int8_t write_config(List l)
 {
     FILE *fp;
-    register uint8_t i, j, k;
-    uint8_t num_keys, key_len;
+    List temp;
+    register uint8_t i;
+    uint8_t key_len;
     uint16_t len;
-    const char *key[] = KEYS;
-    char *buffer, *path, *buffer_, value[MAX_STR], str[MAX_BUFFER];
+    char *buffer, *path, *buffer_, str[MAX_BUFFER];
     
     if (mount_part("/boot")) {
         printf("error: unable to mount /boot\n");
@@ -163,78 +181,40 @@ int8_t write_config(List l)
         return -1;
     }
 
-    num_keys = (uint8_t) (sizeof(key) / sizeof(key[0]));
     buffer_ = buffer;
-    for (i = 0; i < num_keys; i++) {
-        key_len = strlen(key[i]);
-
-        // if a value in the list is empty, skip it.
-        switch (i) {
-
-            case 0:
-                if (!l->arm_freq) {
-                    continue;
-                }
-
-                strcpy(value, l->arm_freq);
-                break;
-
-            case 1:
-                if (!l->gpu_freq) {
-                    continue;
-                }
-
-                strcpy(value, l->gpu_freq);
-                break;
-
-            case 2:
-                if (!l->ov) {
-                    continue;
-                }
-
-                strcpy(value, l->ov);
-                break;
-
-            default:
-                break;
-        }
-
+    for (temp = l; temp; temp = temp->next) {
+        key_len = strlen(temp->key);
         buffer = buffer_;
         while (*buffer) {
-            // ignore comments
+            // ignore comments.
             if (*buffer == '#') {
                 while (*buffer && *buffer++ != '\n');
                 continue;
             }
 
-            j = 0;
-            while (*buffer++ == key[i][j]) {
-                j++;
+            for (i = 0; *buffer == temp->key[i];) {
+                buffer++;
+                i++;
             }
 
-            k = 0;
-            if (j == key_len) {
-                while (*buffer && *buffer++ != '\n') {
-                    k++;
-                }
+            if (i == key_len && *buffer == '=') {
+                buffer++;   // skip '='.
+                for (i = 0; *buffer && *buffer++ != '\n'; i++);     // count characters betweeen '=' and '\n' (the value).
 
-                while (*buffer != '=') {
+                while (*(buffer - 1) != '=') {
                     buffer--;
                 }
-		        buffer++;
 
-                // truncate or expand the buffer
-		        j = 0;
-		        len = strlen(value);
-                if (len > k) {
-                    expand(buffer_, buffer - buffer_, (len - k));
-		        } else if (len < k) {
-                    truncate(buffer_, (buffer + len) - buffer_, k - len);
+                // truncate or expand the buffer.
+		        len = strlen(temp->value);
+                if (len > i) {
+                    expand(buffer_, buffer - buffer_, (len - i));
+		        } else if (len < i) {
+                    truncate(buffer_, (buffer + len) - buffer_, (i - len));
      		    }
 
-                j = 0;
-                while (value[j]) {
-                    *buffer++ = value[j++];
+                for (i = 0; temp->value[i]; i++) {
+                    *buffer++ = temp->value[i];
                 }
 
 		        break;
@@ -243,16 +223,26 @@ int8_t write_config(List l)
                 while (*buffer && *buffer++ != '\n');
                 continue;
             }
+        }
+        
+        // if key doesn't exist, prompt user to add it to the bottom of the file.
+        if (!(*buffer)) {
+            char c = 'a';
 
-            if (!(*buffer)) {
-                sprintf(str, "\n%s=%s", key[i], value);
+            printf("key %s not found in config, add %s=%s to config? [Y/n]: ", temp->key, temp->key, temp->value);
+            while ((c = getchar())) {
+                if (c == 'n' || c == 'N') {
+                    break;
+                } else if (c != 'y' && c != 'Y' && c != '\n') {
+                    continue;
+                }
+                sprintf(str, "%s=%s\n", temp->key, temp->value);
                 strcat(buffer_, str);
                 break;
             }
         }
     }
 
-    // write buffer to config.txt
     fp = fopen(path, "w");
     free(path);
     if (!fp) {
@@ -261,6 +251,7 @@ int8_t write_config(List l)
         return -1;
     }
 
+    // write buffer to config.txt
     len = fwrite(buffer_, sizeof(char), strlen(buffer_), fp);
     if (len < strlen(buffer_)) {
         free(buffer_);
@@ -269,6 +260,7 @@ int8_t write_config(List l)
         return -1;
     }
     fclose(fp);
+
     free(buffer_);
 
     if (umount("/boot")) {
@@ -278,6 +270,7 @@ int8_t write_config(List l)
     return 0;
 }
 
+// TODO: merge expand/truncate.
 void truncate(char *buffer, uint16_t pos, uint8_t t_len)
 {
     uint32_t b_len;
@@ -304,13 +297,10 @@ void expand(char *buffer, uint16_t pos, uint8_t e_len)
     str[b_len + e_len + 1] = '\0';
 }
 
-/*
-        returns a malloc'd pointer to the value assigned to a given key.
-*/
-char *current_value(Key k)
+List get_values(List l)
 {
-    const char *key[] = KEYS;
-    char *path, *buffer, *buffer_, value[MAX_STR], *str;
+    List temp;
+    char *path, *buffer, *buffer_, value[MAX_STR];
     register uint8_t i;
 
     if (mount_part("/boot")) {
@@ -330,49 +320,60 @@ char *current_value(Key k)
     }
 
     buffer_ = buffer;
-    while (*buffer) {
-        if (*buffer == '#') {
-            while (*buffer && *buffer++ != '\n');
-        }
-
-        i = 0;
-        while (*buffer == key[k][i]) {
-            buffer++;
-            i++;
-        }
-
-        if (i == strlen(key[k])) {
-
-            for (i = 0; *buffer++ != '\n'; i++) {
-                value[i] = *buffer;
+    for (temp = l; temp; temp = temp->next) {
+        buffer = buffer_;
+        while (*buffer) {
+            if (*buffer == '#') {
+                while (*buffer && *buffer++ != '\n');
             }
-            value[i] = '\0';
 
-            break;
-        } else {
-            while (*buffer && *buffer++ != '\n');
-            continue;
+            for (i = 0; *buffer == temp->key[i]; i++) {
+                buffer++;
+            }
+
+            if (i == strlen(temp->key) && *buffer == '=') {
+                buffer++;   // skip '='
+
+                for (i = 0; *buffer != '\n'; i++) {
+                    value[i] = *buffer++;
+                }
+                value[i] = '\0';
+
+                // copy config value into value member in list.
+                temp->value = mem_alloc(i + 1);
+                if (!temp->value) { 
+                    return NULL;
+                }
+                strcpy(temp->value, value);
+
+                break;
+            } else {
+                while (*buffer && *buffer++ != '\n');
+                continue;
+            }
         }
-
-    }
-    if (!(*buffer)) {
-        free(buffer_);
-        return "key not found.";
     }
     free(buffer_);
-
-    str = mem_alloc(strlen(value) + 1);
-    if (!str) {
-        
-        return NULL;
-    }
-    strcpy(str, value);
 
     if (umount("/boot")) {
         printf("info: unable to unmount /boot.\n");
     }
 
-    return str;
+    return l;
+}
+
+void print_list(List l)
+{
+    List temp;
+
+    for (temp = l; temp; temp = temp->next) {
+        printf("%s", temp->key);
+        if (temp->value) {
+            printf("=%s\n", temp->value);
+        } else {
+            printf(" is not set in config.\n");
+        }
+    }
 }
 
 /*
@@ -448,7 +449,7 @@ int8_t mount_part(const char *mountpoint)
         }
 
         if (i == strlen(mountpoint)) {
-            // filesystem.
+            // find filesystem.
             while (*buffer == '\t' || *buffer == ' ') {
                 buffer++;
             }
@@ -458,11 +459,10 @@ int8_t mount_part(const char *mountpoint)
             }
             fs[i] = '\0';
 
-            // partition
-            while (*buffer != '\n') {
+            // find partition to mount.
+            while (*(buffer - 1) != '\n') {
                 buffer--;
             }
-            buffer++;
 
             for (i = 0; *buffer != '\t' && *buffer != ' '; i++) {
                 dev[i] = *buffer++;
