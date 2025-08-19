@@ -16,6 +16,8 @@ clean:
 
 install: setpi
 		install -m 755 setpi /usr/local/bin
+		mkdir -p /etc/setpi
 
 uninstall: 
 		rm /usr/local/bin/setpi
+		rm -rf /etc/setpi

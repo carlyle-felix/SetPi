@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
     }
     
     if (!strcmp(argv[1], "--set") || !strcmp(argv[1], "-s")) {
-        i = write_config(l);
+        i = set_values(l);
         if (i) {
             delete_list(l);
             return -1;
