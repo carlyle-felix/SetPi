@@ -179,7 +179,7 @@ char *config_path(void)
 }
 
 /*
-    save current config.txt as a profile in /etc/setpi/
+    save the current config.txt to /etc/setpi/<str>
 */
 int8_t save_profile(char *str)
 {
@@ -211,9 +211,9 @@ int8_t save_profile(char *str)
 }
 
 /*
-    create a new profile using the current config.txt
-    as a base and applying specified values to it before 
-    saving in /etc/setpi
+    use current config.txt as a base to modify and save the
+    modified buffer to /etc/setpi/<str> without modifying config.txt
+
 */
 int8_t new_profile(List l, char *str)
 {
@@ -250,7 +250,7 @@ int8_t new_profile(List l, char *str)
 }
 
 /*
-    delete a saved profile in /etc/setpi
+    delete profile <str> from /etc/setpi
 */
 int8_t delete_profile(char *str)
 {
@@ -270,8 +270,7 @@ int8_t delete_profile(char *str)
 }
 
 /*
-    overwrite /boot/config.txt or /boot/firmware/config/txt with
-    a profile from /etc/setpi
+    overwrite current config.txt with the <str> profile from /etc/setpi
 */
 int8_t apply_profile(char *str)
 {
