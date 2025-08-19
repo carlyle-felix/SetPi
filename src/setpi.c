@@ -14,13 +14,31 @@ int main(int argc, char *argv[])
     if (argc == 1 || !strcmp(argv[1], "--help")) {
 
         printf("SetPi:\tA CLI program for managing Raspberry Pi's config.txt\n");
-        printf("Usage:\tsetpi [option] [<args>] ...\n");
-        printf("options:\n");
-        printf("\t--set | -s:\tadd or update config item(s).\n");
-        printf("\t--get | -g:\tprint current value of config item(s).\n");
         printf("\n");
-        printf("example:\n");
-        printf("\tsetpi -s arm_freq=3000 gpu_freq=1000\n");
+        printf("Usage:\n");
+        printf("\tsetpi [action] <arg> ...\n");
+        printf("\tsetpi [command] [action] <arg> ...\n");
+        printf("\tsetpi [command] <arg>\n");
+        printf("\n");
+        printf("action:\n");
+        printf("\t--set | -s\tadd or update current config item(s).\n");
+        printf("\t--get | -g\tprint value of current config item(s).\n");
+        printf("\n");
+        printf("action examples:\tsetpi --set kernel=kernel8.img disable_overscan=1 ...\n");
+        printf("\t\t\tsetpi -g arm_boost over_voltage_delta ...\n");
+        printf("\n");
+        printf("command:\n");
+        printf("\tprofile\t\tmanage and set config profiles.\n");
+        printf("\n");
+        printf("profile example:\tsetpi profile overclock-profile\n");
+        printf("\n");
+        printf("profile action:\n");
+        printf("\t--save | -S\tsave current config.txt to a specified profile name.\n");
+        printf("\t--del  | -d\tdelete a specified profile.\n");
+        printf("\t--new  | -n\tcreate a new profile using the current config as a base\n");
+        printf("\t\t\tmodifying only specified keys.\n");
+        printf("\n");
+        printf("new profile example:\tsetpi profile --new underclock arm_freq=2000 gpu_freq=600\n");
 
         return 0;
     } else {
@@ -80,7 +98,7 @@ int main(int argc, char *argv[])
 
             return status;
 
-        } else if (!strcmp(argv[2], "--delete") || !strcmp(argv[2], "-d")) {
+        } else if (!strcmp(argv[2], "--del") || !strcmp(argv[2], "-d")) {
             status = delete_profile(argv[3]);
             if (status) {
                 printf("error: unable to delete profile %s.\n", argv[3]);
