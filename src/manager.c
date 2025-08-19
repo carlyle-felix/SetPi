@@ -202,6 +202,7 @@ int8_t save_profile(char *str)
         free(buffer);
         return -1;
     }
+    sprintf(profile, "%s%s", SETPI, str);
 
     status = write_config(buffer, profile);
     free(buffer);
@@ -458,7 +459,7 @@ int8_t write_config(const char *buffer, const char *path)
 
     fp = fopen(path, "w");
     if (!fp) {
-        printf("error: failed to open config.txt in write_config().\n");
+        printf("error: failed to open %s in write_config().\n", path);
         return -1;
     }
 
