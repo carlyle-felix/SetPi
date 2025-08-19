@@ -130,6 +130,9 @@ int main(int argc, char *argv[])
         if (status) {
             printf("error: unable to apply profile %s.\n", argv[3]);
         }
+    } else {
+        printf("unkown instruction: %s\n", argv[1]);
+        return -1;
     }
 
     return 0;
