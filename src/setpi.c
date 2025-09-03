@@ -96,8 +96,8 @@ int main(int argc, char *argv[])
         }
     } else if (!strcmp(argv[1], "profile")) {
         if (argc == 2) {
-            printf("\ncurrent profile: ");
             str = current_profile();
+            printf("\ncurrent profile: ");
             if (!str) {
                 printf("no profile set.\n\n");
                 free(str);
