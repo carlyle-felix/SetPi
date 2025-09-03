@@ -7,6 +7,10 @@
 #include "../incl/manager.h"
 
 #define SETPI "/etc/setpi/"
+#define SETPI_PROFILE "/etc/setpi/profile"
+#define SETPI_PROFILES "/etc/setpi/profiles/"
+
+
 #define MAX_BUFFER 256
 #define MAX_STR 128
 
@@ -198,12 +202,12 @@ int8_t save_profile(char *str)
         return -1;
     }
 
-    profile = mem_alloc(strlen(SETPI) + strlen(str) + 1);
+    profile = mem_alloc(strlen(SETPI_PROFILES) + strlen(str) + 1);
     if (!profile) {
         free(buffer);
         return -1;
     }
-    sprintf(profile, "%s%s", SETPI, str);
+    sprintf(profile, "%s%s", SETPI_PROFILES, str);
 
     status = write_config(buffer, profile);
     free(buffer);
@@ -238,11 +242,11 @@ int8_t new_profile(List l, char *str)
         return -1;
     }
 
-    profile = mem_alloc(strlen(SETPI) + strlen(str) + 1);
+    profile = mem_alloc(strlen(SETPI_PROFILES) + strlen(str) + 1);
     if (!profile) {
         return -1;
     }
-    sprintf(profile, "%s%s", SETPI, str);
+    sprintf(profile, "%s%s", SETPI_PROFILES, str);
 
     status = write_config(buffer, profile);
     free(buffer);
@@ -259,11 +263,11 @@ int8_t delete_profile(char *str)
     char *profile;
     int8_t status;
 
-    profile = mem_alloc(strlen(SETPI) + strlen(str) + 1);
+    profile = mem_alloc(strlen(SETPI_PROFILES) + strlen(str) + 1);
     if (!profile) {
         return -1;
     }
-    sprintf(profile, "%s%s", SETPI, str);
+    sprintf(profile, "%s%s", SETPI_PROFILES, str);
 
     status = remove(profile);
     free(profile);
@@ -279,11 +283,11 @@ int8_t apply_profile(char *str)
     char *profile, *buffer, *config;
     int8_t status;
 
-    profile = mem_alloc(strlen(SETPI) + strlen(str) + 1);
+    profile = mem_alloc(strlen(SETPI_PROFILES) + strlen(str) + 1);
     if (!profile) {
         return -1;
     }
-    sprintf(profile, "%s%s", SETPI, str);
+    sprintf(profile, "%s%s", SETPI_PROFILES, str);
 
     buffer = get_buffer(profile);
     free(profile);
@@ -300,7 +304,12 @@ int8_t apply_profile(char *str)
     status = write_config(buffer, config);
     free(buffer);
     free(config);
+    if (status) {
+        return -1;
+    }
 
+    status = write_config(str, SETPI_PROFILE);
+    
     return status;
 }
 
@@ -713,9 +722,38 @@ int8_t is_mounted(char *mountpoint)
             return 1;
         }
     }
-
+    
     free(buffer_);
     return 0;
+}
+
+char *current_profile(void)
+{
+    char *buffer, *profile;
+    FILE *f;
+
+    f = fopen(SETPI_PROFILE, "r");
+    if (!f) {
+        printf("info: no applied profile found.\n");
+        return NULL;
+    }
+    fclose(f);
+
+    buffer = get_buffer(SETPI_PROFILE);
+    if (!buffer) {
+        return NULL;
+    }
+
+    profile = mem_alloc(strlen(buffer) + 1);
+    if (!profile) {
+        free(buffer);
+        return NULL;
+    }
+
+    strcpy(profile, buffer);
+    free(buffer);
+
+    return profile;
 }
 
 int8_t profile_list(void)
@@ -723,9 +761,9 @@ int8_t profile_list(void)
     DIR *d;
     struct dirent *p;
 
-    d = opendir(SETPI);
+    d = opendir(SETPI_PROFILES);
     if (!d) {
-        printf("error: unable to open " SETPI);
+        printf("error: unable to open " SETPI_PROFILES);
         return -1;
     }
 
@@ -737,6 +775,7 @@ int8_t profile_list(void)
 
         printf("\t%s\n", p->d_name);
     }
+    printf("\n");
 
     closedir(d);
     return 0;
@@ -755,4 +794,5 @@ void print_list(List l)
             printf(" is not set in config.\n");
         }
     }
+    printf("\n");
 }

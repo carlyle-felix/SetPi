@@ -15,6 +15,7 @@ int8_t new_profile(List l, char *str);
 int8_t delete_profile(char *str);
 int8_t apply_profile(char *str);
 int8_t profile_list(void);
+char *current_profile(void);
 void print_list(List l);
 
 #endif
