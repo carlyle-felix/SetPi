@@ -8,6 +8,7 @@
 int main(int argc, char *argv[])
 {
     List l;
+    char *str;
     register uint8_t i;
     int8_t status;
 
@@ -16,30 +17,31 @@ int main(int argc, char *argv[])
         printf("SetPi:\tA CLI program for managing Raspberry Pi's config.txt\n");
         printf("\n");
         printf("usage:\n");
-        printf("\tsetpi [action] <arg> ...\n");
         printf("\tsetpi [command] [action] <arg> ...\n");
-        printf("\tsetpi [command] <arg>\n");
+        printf("\n\trun \e[1msetpi profile\e[m to get the currently applied profile, if any.\n");
         printf("\n");
-        printf("action:\n");
-        printf("\t--set | -s\tadd or update current config item(s).\n");
-        printf("\t--get | -g\tprint value of current config item(s).\n");
-        printf("\n");
-        printf("action examples:\tsetpi --set kernel=kernel8.img disable_overscan=1 ...\n");
-        printf("\t\t\tsetpi -g arm_boost over_voltage_delta ...\n");
-        printf("\n");
-        printf("command:\n");
+        printf("commands:\n");
+        printf("\tconfig\t\tview and set config key(s).\n");
         printf("\tprofile\t\tmanage and set config profiles.\n");
         printf("\n");
-        printf("profile example:\tsetpi profile overclock-profile\n");
+        printf("<actions> for [config]:\n");
+        printf("\t--set | -S\tadd or update current config item(s).\n");
+        printf("\t--get | -g\tprint value of current config item(s).\n");
         printf("\n");
-        printf("profile action:\n");
+        printf("examples:\tsetpi config --set kernel=kernel8.img disable_overscan=1 ...\n");
+        printf("\t\tsetpi config -g arm_boost over_voltage_delta ...\n");
+        printf("\n\n");
+        printf("<actions> for [profile]:\n");
+        printf("\t--set  | -S\tset user created profile (see --new, --save).\n");
         printf("\t--list | -l\tprint a list of available profiles.\n");
-        printf("\t--save | -S\tsave current config.txt to a specified profile name.\n");
+        printf("\t--save | -s\tsave current config.txt to a specified profile name.\n");
         printf("\t--del  | -d\tdelete a specified profile.\n");
         printf("\t--new  | -n\tcreate a new profile using the current config as a base\n");
         printf("\t\t\tmodifying only specified keys.\n");
         printf("\n");
-        printf("new profile example:\tsetpi profile --new underclock arm_freq=2000 gpu_freq=600\n");
+        printf("examples:\tsetpi profile --new underclock arm_freq=2000 gpu_freq=600\n");
+        printf("\t\tsetpi profile --save my-profile\n");
+        printf("\t\tsetpi profile --set my-profile\n");
 
         return 0;
     } else {
@@ -50,48 +52,69 @@ int main(int argc, char *argv[])
             return -1;
         }
     }
-    
-    if (!strcmp(argv[1], "--set") || !strcmp(argv[1], "-s")) {
-        
-        l = create_list();
-        for (i = 2; i < argc; i++) {
-            l = add_item(l, argv[i]);
+
+    if (!strcmp(argv[1], "config")) {      
+        if (argc == 2) {
+            printf("error: no action specified, use --help for help.\n");
+        } else if (!strcmp(argv[2], "--set") || !strcmp(argv[2], "-S")) {          
+            l = create_list();
+            for (i = 3; i < argc; i++) {
+                l = add_item(l, argv[i]);
+                if (!l) {
+                    printf("error: unable to add item %s to list.\n", argv[i]);
+                    delete_list(l);
+                    return -1;
+                }
+            }
+
+            status = set_values(l);
+            delete_list(l);
+            if (status) {
+                return status;
+            }
+
+        } else if (!strcmp(argv[2], "--get") || !strcmp(argv[2], "-g")) {  
+            l = create_list();
+            for (i = 3; i < argc; i++) {
+                l = add_item(l, argv[i]);
+                if (!l) {
+                    printf("error: unable to add item %s to list.\n", argv[i]);
+                    delete_list(l);
+                    return -1;
+                }
+            }
+
+            l = get_values(l);
             if (!l) {
-                printf("error: unable to add item %s to list.\n", argv[i]);
-                delete_list(l);
+                printf("error: unable to get values from config.txt.\n");
                 return -1;
             }
+            print_list(l);
+            delete_list(l);
+        } else {
+            printf("unkown action: %s, use --help for help.\n", argv[2]);
         }
-
-        status = set_values(l);
-        delete_list(l);
-        if (status) {
-            return status;
-        }
-
-    } else if (!strcmp(argv[1], "--get") || !strcmp(argv[1], "-g")) {
-        
-        l = create_list();
-        for (i = 2; i < argc; i++) {
-            l = add_item(l, argv[i]);
-            if (!l) {
-                printf("error: unable to add item %s to list.\n", argv[i]);
-                delete_list(l);
-                return -1;
-            }
-        }
-
-        l = get_values(l);
-        if (!l) {
-            printf("error: unable to get values from config.txt.\n");
-            return -1;
-        }
-        print_list(l);
-        delete_list(l);
-
     } else if (!strcmp(argv[1], "profile")) {
-        
-        if (!strcmp(argv[2], "--save") || !strcmp(argv[2], "-S")) {
+        if (argc == 2) {
+            printf("\ncurrent profile: ");
+            str = current_profile();
+            if (!str) {
+                printf("no profile set.\n\n");
+                free(str);
+                return -1;
+            }
+            printf("%s\n\n", str);
+            free(str);
+
+        } else if (!strcmp(argv[2], "--set") || !strcmp(argv[2], "-S")) {
+            status = apply_profile(argv[3]);
+            if (status) {
+                printf("error: unable to set profile %s.\n", argv[3]);
+            }
+
+            return status;
+
+        } else if (!strcmp(argv[2], "--save") || !strcmp(argv[2], "-s")) {
             status = save_profile(argv[3]);
             if (status) {
                 printf("error: unable to save profile %s.\n", argv[3]);
@@ -125,6 +148,7 @@ int main(int argc, char *argv[])
             }
 
             return status;
+
         } else if (!strcmp(argv[2], "--list") || !strcmp(argv[2], "-l")) {
             status = profile_list();
             if (status) {
@@ -132,14 +156,12 @@ int main(int argc, char *argv[])
             }
 
             return status;
+        } else {
+            printf("unkown action: %s, use --help for help.\n", argv[2]);
         }
 
-        status = apply_profile(argv[2]);
-        if (status) {
-            printf("error: unable to apply profile %s.\n", argv[3]);
-        }
     } else {
-        printf("unkown instruction: %s\n", argv[1]);
+        printf("unkown command: %s, use --help for help.\n", argv[1]);
         return -1;
     }
 
