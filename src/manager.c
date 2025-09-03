@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mount.h>
+#include <dirent.h>
 
 #include "../incl/manager.h"
 
@@ -531,20 +532,6 @@ List get_values(List l)
     return l;
 }
 
-void print_list(List l)
-{
-    List temp;
-
-    for (temp = l; temp; temp = temp->next) {
-        printf("%s", temp->key);
-        if (temp->value) {
-            printf("=%s\n", temp->value);
-        } else {
-            printf(" is not set in config.\n");
-        }
-    }
-}
-
 /*
     returns a malloc'd pointer to buffer of text found in config.txt.
 */
@@ -729,4 +716,43 @@ int8_t is_mounted(char *mountpoint)
 
     free(buffer_);
     return 0;
+}
+
+int8_t profile_list(void)
+{
+    DIR *d;
+    struct dirent *p;
+
+    d = opendir(SETPI);
+    if (!d) {
+        printf("error: unable to open " SETPI);
+        return -1;
+    }
+
+    printf("\navailable profiles:\n");
+    while ((p = readdir(d))) {
+        if (!strcmp(p->d_name, ".") || !strcmp(p->d_name, "..")) {
+            continue;
+        }
+
+        printf("\t%s\n", p->d_name);
+    }
+
+    closedir(d);
+    return 0;
+}
+
+void print_list(List l)
+{
+    List temp;
+
+    printf("\nconfig values:\n");
+    for (temp = l; temp; temp = temp->next) {
+        printf("\t%s", temp->key);
+        if (temp->value) {
+            printf("=%s\n", temp->value);
+        } else {
+            printf(" is not set in config.\n");
+        }
+    }
 }

@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
 
         printf("SetPi:\tA CLI program for managing Raspberry Pi's config.txt\n");
         printf("\n");
-        printf("Usage:\n");
+        printf("usage:\n");
         printf("\tsetpi [action] <arg> ...\n");
         printf("\tsetpi [command] [action] <arg> ...\n");
         printf("\tsetpi [command] <arg>\n");
@@ -33,6 +33,7 @@ int main(int argc, char *argv[])
         printf("profile example:\tsetpi profile overclock-profile\n");
         printf("\n");
         printf("profile action:\n");
+        printf("\t--list | -l\tprint a list of available profiles.\n");
         printf("\t--save | -S\tsave current config.txt to a specified profile name.\n");
         printf("\t--del  | -d\tdelete a specified profile.\n");
         printf("\t--new  | -n\tcreate a new profile using the current config as a base\n");
@@ -124,7 +125,14 @@ int main(int argc, char *argv[])
             }
 
             return status;
-        } 
+        } else if (!strcmp(argv[2], "--list") || !strcmp(argv[2], "-l")) {
+            status = profile_list();
+            if (status) {
+                printf("error: unable to retrieve list of profiles.\n");
+            }
+
+            return status;
+        }
 
         status = apply_profile(argv[2]);
         if (status) {
