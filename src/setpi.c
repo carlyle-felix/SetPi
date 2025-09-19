@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
         printf("\t--set | -S\tadd or update current config item(s).\n");
         printf("\t--get | -g\tprint value of current config item(s).\n");
         printf("\n");
-        printf("examples:\tsetpi config --set kernel=kernel8.img disable_overscan=1 ...\n");
+        printf("examples:\tsetpi config --set kernel kernel8.img disable_overscan 1 ...\n");
         printf("\t\tsetpi config -g arm_boost over_voltage_delta ...\n");
         printf("\n\n");
         printf("[actions] for profile:\n");
@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
         printf("\t--new  | -n\tcreate a new profile using the current config as a base\n");
         printf("\t\t\tmodifying only specified keys.\n");
         printf("\n");
-        printf("examples:\tsetpi profile --new underclock arm_freq=2000 gpu_freq=600\n");
+        printf("examples:\tsetpi profile --new underclock arm_freq 2000 gpu_freq 600\n");
         printf("\t\tsetpi profile --save my-profile\n");
         printf("\t\tsetpi profile --set my-profile\n");
 
@@ -59,12 +59,13 @@ int main(int argc, char *argv[])
         } else if (!strcmp(argv[2], "--set") || !strcmp(argv[2], "-S")) {          
             l = create_list();
             for (i = 3; i < argc; i++) {
-                l = add_item(l, argv[i]);
+                l = add_item(l, argv[i], argv[i + 1]);
                 if (!l) {
-                    printf("error: unable to add item %s to list.\n", argv[i]);
+                    printf("error: unable to add key %s and value %s to list.\n", argv[i - 1], argv[i]);
                     delete_list(l);
                     return -1;
                 }
+                i++;
             }
 
             status = set_values(l);
@@ -76,7 +77,7 @@ int main(int argc, char *argv[])
         } else if (!strcmp(argv[2], "--get") || !strcmp(argv[2], "-g")) {  
             l = create_list();
             for (i = 3; i < argc; i++) {
-                l = add_item(l, argv[i]);
+                l = add_item(l, argv[i], NULL);
                 if (!l) {
                     printf("error: unable to add item %s to list.\n", argv[i]);
                     delete_list(l);
@@ -133,7 +134,7 @@ int main(int argc, char *argv[])
         } else if (!strcmp(argv[2], "--new") || !strcmp(argv[2], "-n")) {
             l = create_list();
             for (i = 4; i < argc; i++) {
-                l = add_item(l, argv[i]);
+                l = add_item(l, argv[i], NULL);
                 if (!l) {
                     printf("error: unable to add item %s to list.\n", argv[i]);
                     delete_list(l);

@@ -7,7 +7,7 @@ typedef struct node *List;
 
 List create_list(void);
 void delete_list(List l);
-List add_item(List l, const char *item);
+List add_item(List l, const char *key, const char *value);
 int8_t set_values(List l);
 List get_values(List l);
 int8_t save_profile(char *str);

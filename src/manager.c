@@ -98,11 +98,9 @@ void *mem_realloc(void *p, uint16_t n)
     return new;
 }
 
-List add_item(List l, const char *item)
+List add_item(List l, const char *key, const char *value)
 {
     List temp;
-    char str[MAX_STR];
-    register uint8_t i;
 
     if (!l->key) {
         free(l);
@@ -114,28 +112,18 @@ List add_item(List l, const char *item)
         return NULL;
     }
 
-    for (i = 0; *item && *item != '='; i++) {
-        str[i] = *item++;
-    }
-    str[i] = '\0';
-    
-    temp->key = mem_alloc(i + 1);
+    temp->key = mem_alloc(strlen(key) + 1);
     if (!temp->key) {
         return NULL;
     }
-    strcpy(temp->key, str);
+    strcpy(temp->key, key);
 
-    if (*item) {
-        for (i = 0; *item++; i++) {
-            str[i] = *item;
-        }
-        str[i] = '\0';
-
-        temp->value = mem_alloc(i + 1);
+    if (value) {
+        temp->value = mem_alloc(strlen(value) + 1);
         if (!temp->value) {
             return NULL;
         }
-        strcpy(temp->value, str);
+        strcpy(temp->value, value);
     } else {
         temp->value = NULL;
     }
@@ -767,7 +755,7 @@ int8_t profile_list(void)
         return -1;
     }
 
-    printf("\navailable profiles:\n");
+    printf("\navailable profiles:\n\n");
     while ((p = readdir(d))) {
         if (!strcmp(p->d_name, ".") || !strcmp(p->d_name, "..")) {
             continue;
@@ -785,7 +773,7 @@ void print_list(List l)
 {
     List temp;
 
-    printf("\nconfig values:\n");
+    printf("\nconfig values:\n\n");
     for (temp = l; temp; temp = temp->next) {
         printf("\t%s", temp->key);
         if (temp->value) {
