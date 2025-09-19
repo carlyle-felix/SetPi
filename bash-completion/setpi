@@ -1,0 +1,28 @@
+_setpi() {
+    local cur prev action command
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    
+    case "${prev}" in 
+
+        "setpi")
+            command="config profile"
+            COMPREPLY=( $(compgen -W "${command}" -- ${cur}) )
+        ;;
+
+        "config")
+            action="--set --get"
+            COMPREPLY=( $(compgen -W "${action}" -- ${cur}) )
+        ;;
+
+        "profile")
+            action="--set --get --list --save --del --new"
+            COMPREPLY=( $(compgen -W "${action}" -- ${cur}) )
+        ;;
+
+    esac
+
+    return 0
+}
+complete -F _setpi setpi

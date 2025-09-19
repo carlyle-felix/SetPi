@@ -15,9 +15,11 @@ clean:
 		rm setpi setpi.o manager.o
 
 install: setpi
-		install -m 740 setpi /usr/local/bin
+		install -Dm755 setpi /usr/local/bin
+		install -Dm644 bash-completion/setpi /etc/bash_completion.d/setpi
 		mkdir -p /etc/setpi/profiles
 
 uninstall: 
 		rm /usr/local/bin/setpi
 		rm -rf /etc/setpi
+		rm /etc/bash_completion.d/setpi
