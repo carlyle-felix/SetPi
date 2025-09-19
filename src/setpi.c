@@ -25,6 +25,7 @@ int main(int argc, char *argv[])
         printf("\tprofile\t\tmanage and set config profiles.\n");
         printf("\n");
         printf("[actions] for config:\n");
+        printf("\tsetpi config [action] <key [value]> ...\n\n");
         printf("\t--set | -S\tadd or update current config item(s).\n");
         printf("\t--get | -g\tprint value of current config item(s).\n");
         printf("\n");
@@ -32,6 +33,7 @@ int main(int argc, char *argv[])
         printf("\t\tsetpi config -g arm_boost over_voltage_delta ...\n");
         printf("\n\n");
         printf("[actions] for profile:\n");
+        printf("\tsetpi profile [action] <filename>\n\n");
         printf("\t--set  | -S\tset user created profile (see --new, --save).\n");
         printf("\t--list | -l\tprint a list of available profiles.\n");
         printf("\t--save | -s\tsave current config.txt to a specified profile name.\n");
@@ -42,6 +44,10 @@ int main(int argc, char *argv[])
         printf("examples:\tsetpi profile --new underclock arm_freq 2000 gpu_freq 600\n");
         printf("\t\tsetpi profile --save my-profile\n");
         printf("\t\tsetpi profile --set my-profile\n");
+        printf("\n");
+        printf("bash-completion only suggests a list of common keys, for a full list\n");
+        printf("see https://www.raspberrypi.com/documentation/computers/config_txt.html\n");
+        printf("\n");
 
         return 0;
     } else {
