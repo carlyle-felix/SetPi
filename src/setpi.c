@@ -17,10 +17,10 @@ int main(int argc, char *argv[])
         printf("SetPi:\tA CLI program for managing Raspberry Pi's config.txt\n");
         printf("\n");
         printf("usage:\n");
-        printf("\tsetpi command [action] <arg> ...\n");
+        printf("\tsetpi option [action] <arg> ...\n");
         printf("\n\trun \e[1msetpi profile\e[m to get the currently applied profile, if any.\n");
         printf("\n");
-        printf("commands:\n");
+        printf("option:\n");
         printf("\tconfig\t\tview and set config key(s).\n");
         printf("\tprofile\t\tmanage and set config profiles.\n");
         printf("\n");
@@ -140,12 +140,13 @@ int main(int argc, char *argv[])
         } else if (!strcmp(argv[2], "--new") || !strcmp(argv[2], "-n")) {
             l = create_list();
             for (i = 4; i < argc; i++) {
-                l = add_item(l, argv[i], NULL);
+                l = add_item(l, argv[i], argv[i + 1]);
                 if (!l) {
                     printf("error: unable to add item %s to list.\n", argv[i]);
                     delete_list(l);
                     return -1;
                 }
+                i++;
             }
 
             status = new_profile(l, argv[3]);
@@ -168,7 +169,7 @@ int main(int argc, char *argv[])
         }
 
     } else {
-        printf("unkown command: %s, use --help for help.\n", argv[1]);
+        printf("unkown option: %s, use --help for help.\n", argv[1]);
         return -1;
     }
 
