@@ -1,9 +1,10 @@
 _setpi() {
-    local cur prev action command
+    local cur prev action command keys profiles
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    
+    prev2="${COMP_WORDS[COMP_CWORD-2]}"
+
     case "${prev}" in 
 
         "setpi")
@@ -17,8 +18,19 @@ _setpi() {
         ;;
 
         "profile")
-            action="--set --get --list --save --del --new"
+            action="--set --list --save --del --new"
             COMPREPLY=( $(compgen -W "${action}" -- ${cur}) )
+        ;;
+
+        "--set" | "--get" | "--del")
+            if [[ "${prev2}" == "config" && "${prev}" != "--del" ]]; then
+                keys="arm_boost arm_freq cmdline core_freq disable_splash dtoverlay dtparam \
+                      force_turbo gpu_freq gpu_mem kernel over_voltage over_voltage_delta"
+                COMPREPLY=( $(compgen -W "${keys}" -- ${cur}) )
+            elif [[ "${prev2}" == "profile" && "${prev}" != "--get" ]]; then
+                profiles="$(ls /etc/setpi/profiles)" 
+                COMPREPLY=( $(compgen -W "${profiles}" -- ${cur}) )
+            fi
         ;;
 
     esac
