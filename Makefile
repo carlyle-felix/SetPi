@@ -15,7 +15,7 @@ clean:
 		rm setpi setpi.o manager.o
 
 install: setpi
-		install -m 755 setpi /usr/local/bin
+		install -m 740 setpi /usr/local/bin
 		mkdir -p /etc/setpi/profiles
 
 uninstall: 
