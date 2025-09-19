@@ -5,6 +5,9 @@ _setpi() {
     prev="${COMP_WORDS[COMP_CWORD-1]}"
     prev2="${COMP_WORDS[COMP_CWORD-2]}"
 
+    keys="arm_boost arm_freq cmdline core_freq disable_splash dtoverlay dtparam \
+         force_turbo gpu_freq gpu_mem kernel over_voltage over_voltage_delta"
+
     case "${prev}" in 
 
         "setpi")
@@ -24,8 +27,6 @@ _setpi() {
 
         "--set" | "--get" | "--del")
             if [[ "${prev2}" == "config" && "${prev}" != "--del" ]]; then
-                keys="arm_boost arm_freq cmdline core_freq disable_splash dtoverlay dtparam \
-                      force_turbo gpu_freq gpu_mem kernel over_voltage over_voltage_delta"
                 COMPREPLY=( $(compgen -W "${keys}" -- ${cur}) )
             elif [[ "${prev2}" == "profile" && "${prev}" != "--get" ]]; then
                 profiles="$(ls /etc/setpi/profiles)" 
@@ -34,6 +35,10 @@ _setpi() {
         ;;
 
     esac
+
+    if [[ "${COMP_CWORD}" > 4 && "$((COMP_CWORD % 2))" != 0 ]]; then
+        COMPREPLY=( $(compgen -W "${keys}" -- ${cur}) )
+    fi
 
     return 0
 }
