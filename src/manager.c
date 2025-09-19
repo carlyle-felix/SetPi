@@ -755,13 +755,13 @@ int8_t profile_list(void)
         return -1;
     }
 
-    printf("\navailable profiles:\n\n");
+    printf("\n");
     while ((p = readdir(d))) {
         if (!strcmp(p->d_name, ".") || !strcmp(p->d_name, "..")) {
             continue;
         }
 
-        printf("\t%s\n", p->d_name);
+        printf("%s\n", p->d_name);
     }
     printf("\n");
 
@@ -773,9 +773,9 @@ void print_list(List l)
 {
     List temp;
 
-    printf("\nconfig values:\n\n");
+    printf("\n");
     for (temp = l; temp; temp = temp->next) {
-        printf("\t%s", temp->key);
+        printf("%s", temp->key);
         if (temp->value) {
             printf("=%s\n", temp->value);
         } else {
