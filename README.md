@@ -71,7 +71,7 @@ dtoverlay=vc4-kms-v3d
 ```
 # setpi profile --set overclock
 ```
-
+---
 ## Notes
 
 - A reboot is required for changes to be applied.
